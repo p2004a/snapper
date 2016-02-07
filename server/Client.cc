@@ -347,6 +347,15 @@ Client::introspect(DBus::Connection& conn, DBus::Message& msg)
 	"      <arg name='files' type='v' direction='out'/>\n"
 	"    </method>\n"
 
+	"    <method name='GetFilesPart'>\n"
+	"      <arg name='config-name' type='s' direction='in'/>\n"
+	"      <arg name='number1' type='u' direction='in'/>\n"
+	"      <arg name='number2' type='u' direction='in'/>\n"
+	"      <arg name='offset' type='u' direction='in'/>\n"
+	"      <arg name='limit' type='u' direction='in'/>\n"
+	"      <arg name='files' type='a(su)' direction='out'/>\n"
+	"    </method>\n"
+
 	"    <method name='Sync'>\n"
 	"      <arg name='config-name' type='s' direction='in'/>\n"
 	"    </method>\n"
@@ -1288,6 +1297,44 @@ Client::get_files(DBus::Connection& conn, DBus::Message& msg)
 
 
 void
+Client::get_files_part(DBus::Connection& conn, DBus::Message& msg)
+{
+    string config_name;
+    dbus_uint32_t num1, num2, offset, limit;
+
+    DBus::Hihi hihi(msg);
+    hihi >> config_name >> num1 >> num2 >> offset >> limit;
+
+    y2deb("GetFilesPart config_name:" << config_name << " num1:" << num1 <<
+	  " num2:" << num2 << " offset:" << offset << " limit:" << limit);
+
+    boost::unique_lock<boost::shared_mutex> lock(big_mutex);
+
+    MetaSnappers::iterator it = meta_snappers.find(config_name);
+
+    check_permission(conn, msg, *it);
+
+    list<Comparison*>::iterator it2 = find_comparison(it->getSnapper(), num1, num2);
+
+    const Files& files = (*it2)->getFiles();
+
+    DBus::MessageMethodReturn reply(msg);
+
+    DBus::Hoho hoho(reply);
+
+    Files::const_iterator files_it = files.begin();
+    advance(files_it, min(static_cast<size_t>(offset), files.size()));
+    hoho.open_array(DBus::TypeInfo<File>::signature);
+    for (dbus_uint32_t i = 0; i < limit && files_it != files.end(); ++i, ++files_it) {
+	hoho << *files_it;
+    }
+    hoho.close_array();
+
+    conn.send(reply);
+}
+
+
+void
 Client::sync(DBus::Connection& conn, DBus::Message& msg)
 {
     string config_name;
@@ -1427,6 +1474,8 @@ Client::dispatch(DBus::Connection& conn, DBus::Message& msg)
 	    delete_comparison(conn, msg);
 	else if (msg.is_method_call(INTERFACE, "GetFiles"))
 	    get_files(conn, msg);
+	else if (msg.is_method_call(INTERFACE, "GetFilesPart"))
+	    get_files_part(conn, msg);
 	else if (msg.is_method_call(INTERFACE, "Sync"))
 	    sync(conn, msg);
 	else if (msg.is_method_call(INTERFACE, "Debug"))
