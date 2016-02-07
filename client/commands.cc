@@ -382,17 +382,27 @@ list<XFile>
 command_get_xfiles(DBus::Connection& conn, const string& config_name, unsigned int number1,
 		   unsigned int number2)
 {
-    DBus::MessageMethodCall call(SERVICE, OBJECT, INTERFACE, "GetFiles");
-
-    DBus::Hoho hoho(call);
-    hoho << config_name << number1 << number2;
-
-    DBus::Message reply = conn.send_with_reply_and_block(call);
-
     list<XFile> files;
+    const unsigned int limit = 5000;
 
-    DBus::Hihi hihi(reply);
-    hihi >> files;
+    bool empty_result;
+    do {
+	DBus::MessageMethodCall call(SERVICE, OBJECT, INTERFACE, "GetFilesPart");
+
+	DBus::Hoho hoho(call);
+	hoho << config_name << number1 << number2 << static_cast<unsigned int>(files.size()) << limit;
+
+	DBus::Message reply = conn.send_with_reply_and_block(call);
+
+	list<XFile> files_part;
+
+	DBus::Hihi hihi(reply);
+	hihi >> files_part;
+
+	empty_result = files_part.empty();
+
+	files.splice(files.end(), files_part);
+    } while (!empty_result);
 
     files.sort();		// snapperd can have different locale than client
 				// so sorting is required here
