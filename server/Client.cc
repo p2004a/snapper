@@ -345,6 +345,7 @@ Client::introspect(DBus::Connection& conn, DBus::Message& msg)
 	"      <arg name='number1' type='u' direction='in'/>\n"
 	"      <arg name='number2' type='u' direction='in'/>\n"
 	"      <arg name='files' type='v' direction='out'/>\n"
+	"      <annotation name='org.freedesktop.DBus.Deprecated' value='true'/>\n"
 	"    </method>\n"
 
 	"    <method name='GetFilesPart'>\n"

@@ -50,7 +50,8 @@ method DeleteComparison config-name number1 number2
 
 The following command require a successful CreateComparison in advance.
 
-method GetFiles config-name number1 number2 -> list(filename status)
+method GetFiles config-name number1 number2 -> list(filename status) [deprecated]
+method GetFilesPart config-name number1 number2 offset limit -> list(filename status)
 
 
 
